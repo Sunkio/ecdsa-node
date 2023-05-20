@@ -1,5 +1,14 @@
 import { useState } from "react";
 import server from "./server";
+import ethUtil from 'ethereumjs-util';
+
+function signMessage(senderPrivateKey, message) {
+  const privateKeyBuffer = Buffer.from(senderPrivateKey, 'hex');
+  const msgHash = ethUtil.keccak(Buffer.from(message));
+
+  const sig = ethUtil.ecsign(msgHash, privateKeyBuffer);
+  return ethUtil.bufferToHex(ethUtil.toRpcSig(sig.v, sig.r, sig.s));
+}
 
 function Transfer({ address, setBalance }) {
   const [sendAmount, setSendAmount] = useState("");
@@ -10,6 +19,15 @@ function Transfer({ address, setBalance }) {
   async function transfer(evt) {
     evt.preventDefault();
 
+    // Here we use a hardcoded private key for demo purposes only.
+    // NEVER do this in a real-world application. Use a wallet like MetaMask to handle private keys.
+    const senderPrivateKey = 'your_sender_private_key_here';
+
+    // Use the same message as in the server for verifying the signature
+    const message = 'Authorize Transaction';
+
+    const generatedSignature = signMessage(senderPrivateKey, message);
+
     try {
       const {
         data: { balance },
@@ -17,6 +35,7 @@ function Transfer({ address, setBalance }) {
         sender: address,
         amount: parseInt(sendAmount),
         recipient,
+        signature: generatedSignature,
       });
       setBalance(balance);
     } catch (ex) {
